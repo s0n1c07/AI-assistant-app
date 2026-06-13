@@ -8,16 +8,17 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Aria AI — Your Intelligent Voice Assistant",
+  title: "VoxMind AI — Intelligent Voice & Chat Assistant",
   description:
-    "Chat and talk with Aria, a real-time AI assistant powered by voice AI. Sign in to get started.",
-  keywords: ["AI assistant", "voice chat", "Aria", "AI", "Next.js"],
+    "Talk or type with VoxMind AI — multiple personas, 12 languages, memory system, and usage analytics. Powered by Vapi AI and Clerk.",
+  keywords: ["AI assistant", "voice chat", "VoxMind", "AI personas", "Next.js", "Vapi"],
   openGraph: {
-    title: "Aria AI — Your Intelligent Voice Assistant",
-    description: "Real-time AI chat and voice assistant",
+    title: "VoxMind AI — Intelligent Voice & Chat Assistant",
+    description: "Real-time AI voice and text assistant with personas, memory, and analytics.",
     type: "website",
   },
 };
@@ -30,7 +31,20 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.variable} font-sans antialiased`}>
+        <head>
+          {/* Prevent theme flash on load */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                try {
+                  const t = localStorage.getItem('voxmind-theme') || 'dark';
+                  document.documentElement.setAttribute('data-theme', t);
+                } catch(e) {}
+              `,
+            }}
+          />
+        </head>
+        <body className={`${inter.variable}`}>
           <ConvexClerkProvider>
             <Navbar />
             <main>{children}</main>

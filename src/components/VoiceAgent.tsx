@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Vapi from "@vapi-ai/web";
 import { Mic, MicOff, PhoneOff, Volume2, Loader2 } from "lucide-react";
 import type { Persona } from "@/constants/personas";
+import type { Language } from "@/constants/languages";
 
 type CallStatus = "idle" | "connecting" | "active" | "ending";
 
@@ -16,12 +17,14 @@ interface Message {
 interface VoiceAgentProps {
   userName?: string;
   persona: Persona;
+  language?: Language;
+  onSessionStart?: () => void;
   onSessionEnd?: (messageCount: number) => void;
 }
 
 const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN!);
 
-export default function VoiceAgent({ userName, persona, onSessionEnd }: VoiceAgentProps) {
+export default function VoiceAgent({ userName, persona, language, onSessionStart, onSessionEnd }: VoiceAgentProps) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,10 +45,11 @@ export default function VoiceAgent({ userName, persona, onSessionEnd }: VoiceAge
     const onCallStart = () => {
       setCallStatus("active");
       messageCountRef.current = 0;
+      onSessionStart?.();
       setMessages([
         {
           role: "assistant",
-          content: `Hello${userName ? `, ${userName}` : ""}! I'm ${persona.name}. ${
+          content: `Hello${userName ? `, ${userName}` : ""}! I'm ${persona.name} on VoxMind. ${
             persona.id === "aria"
               ? "How can I help you today?"
               : persona.id === "alex"
@@ -104,7 +108,9 @@ export default function VoiceAgent({ userName, persona, onSessionEnd }: VoiceAge
     setCallStatus("connecting");
     setMessages([]);
     try {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!);
+      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
+        transcriber: language ? { language: language.vapiLang } : undefined,
+      } as Record<string, unknown>);
     } catch (error) {
       console.error("Failed to start call:", error);
       setCallStatus("idle");

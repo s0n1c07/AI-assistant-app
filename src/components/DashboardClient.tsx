@@ -2,24 +2,28 @@
 
 import { useState } from "react";
 import VoiceAgent from "@/components/VoiceAgent";
+import ChatPanel from "@/components/ChatPanel";
 import PersonaSelector from "@/components/PersonaSelector";
 import MemoryPanel from "@/components/MemoryPanel";
 import UsageDashboard from "@/components/UsageDashboard";
+import LanguageSelector from "@/components/LanguageSelector";
 import { personas, type Persona } from "@/constants/personas";
-import { Bot, BarChart2, Brain } from "lucide-react";
+import { defaultLanguage, type Language } from "@/constants/languages";
+import { Bot, BarChart2, Brain, MessageSquare, Mic } from "lucide-react";
 
 interface DashboardClientProps {
   firstName: string;
   userId: string;
 }
 
-type Tab = "voice" | "stats" | "memory";
+type Tab = "voice" | "chat" | "stats" | "memory";
 
 export default function DashboardClient({ firstName, userId }: DashboardClientProps) {
   const [selectedPersona, setSelectedPersona] = useState<Persona>(personas[0]);
   const [activeTab, setActiveTab] = useState<Tab>("voice");
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(defaultLanguage);
+  const [sessionStart, setSessionStart] = useState<number | null>(null);
 
-  // Local mock memories / sessions for users without Convex set up yet
   const [localMemories, setLocalMemories] = useState<
     Array<{ _id: string; fact: string; category: string; createdAt: number }>
   >([]);
@@ -32,7 +36,8 @@ export default function DashboardClient({ firstName, userId }: DashboardClientPr
       personaId: string;
     }>
   >([]);
-  const [sessionStart, setSessionStart] = useState<number | null>(null);
+
+  const handleSessionStart = () => setSessionStart(Date.now());
 
   const handleSessionEnd = (messageCount: number) => {
     if (sessionStart) {
@@ -50,120 +55,71 @@ export default function DashboardClient({ firstName, userId }: DashboardClientPr
     }
   };
 
-  const handleVoiceStart = () => {
-    setSessionStart(Date.now());
-  };
-
   const tabs: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
-    { id: "voice", label: "Voice Session", icon: <Bot size={15} /> },
-    { id: "stats", label: "Analytics", icon: <BarChart2 size={15} /> },
-    { id: "memory", label: "Memory", icon: <Brain size={15} /> },
+    { id: "voice", label: "Voice",     icon: <Mic size={14} /> },
+    { id: "chat",  label: "Text Chat", icon: <MessageSquare size={14} /> },
+    { id: "stats", label: "Analytics", icon: <BarChart2 size={14} /> },
+    { id: "memory",label: "Memory",    icon: <Brain size={14} /> },
   ];
 
+  void userId; // will be used when Convex is connected
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        paddingTop: "64px",
-        background: "var(--bg-primary)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div className="page-wrapper">
       {/* Ambient blobs */}
       <div
+        className="blob"
         style={{
-          position: "absolute",
-          top: "15%",
-          left: "5%",
-          width: "400px",
-          height: "400px",
-          borderRadius: "50%",
+          top: "15%", left: "5%",
+          width: "400px", height: "400px",
           background: `radial-gradient(circle, ${selectedPersona.color}18 0%, transparent 70%)`,
-          filter: "blur(60px)",
-          pointerEvents: "none",
           transition: "background 0.5s ease",
         }}
       />
       <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          right: "5%",
-          width: "300px",
-          height: "300px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)",
-          filter: "blur(50px)",
-          pointerEvents: "none",
-        }}
+        className="blob blob-blue"
+        style={{ top: "50%", right: "5%", width: "300px", height: "300px" }}
       />
 
-      <div
-        style={{
-          maxWidth: "960px",
-          margin: "0 auto",
-          padding: "2.5rem 1.5rem",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: "2rem" }}>
-          <h1
-            style={{ fontSize: "clamp(1.6rem, 4vw, 2.2rem)", fontWeight: 800, marginBottom: "0.4rem" }}
-          >
-            Hey{" "}
-            <span
-              className="gradient-text"
-              style={{
+      <div className="container">
+        {/* Header row */}
+        <div style={{ marginBottom: "1.75rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <div className="badge" style={{ marginBottom: "0.75rem" }}>
+              <Bot size={11} />
+              VoxMind Dashboard
+            </div>
+            <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 800, marginBottom: "0.3rem" }}>
+              Hey{" "}
+              <span style={{
                 background: selectedPersona.gradient,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-              }}
-            >
-              {firstName}
-            </span>{" "}
-            👋
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-            Your AI companion is ready. Pick a persona and start talking.
-          </p>
+              }}>
+                {firstName}
+              </span>{" "}👋
+            </h1>
+            <p className="text-secondary" style={{ fontSize: "0.9rem" }}>
+              Pick a persona and language, then start talking or chatting.
+            </p>
+          </div>
+
+          {/* Language selector */}
+          <LanguageSelector selected={selectedLanguage} onSelect={setSelectedLanguage} />
         </div>
 
-        {/* Tab Nav */}
-        <div
-          style={{
-            display: "flex",
-            gap: "4px",
-            marginBottom: "1.75rem",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            padding: "4px",
-            width: "fit-content",
-          }}
-        >
+        {/* Tab nav */}
+        <div className="tab-bar" style={{ marginBottom: "1.5rem" }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              className={`tab-btn ${activeTab === tab.id ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                borderRadius: "9px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                transition: "all 0.2s ease",
-                background: activeTab === tab.id ? selectedPersona.color : "transparent",
-                color: activeTab === tab.id ? "white" : "var(--text-muted)",
-                boxShadow: activeTab === tab.id ? `0 2px 12px ${selectedPersona.glow}` : "none",
-              }}
+              style={activeTab === tab.id ? {
+                background: selectedPersona.color,
+                boxShadow: `0 2px 12px ${selectedPersona.glow}`,
+              } : {}}
             >
               {tab.icon}
               {tab.label}
@@ -171,107 +127,103 @@ export default function DashboardClient({ firstName, userId }: DashboardClientPr
           ))}
         </div>
 
-        {/* VOICE TAB */}
+        {/* ── VOICE TAB ─────────────────────────────────────── */}
         {activeTab === "voice" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1.25rem" }}>
-            {/* Persona Selector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div className="glass-card" style={{ padding: "1.5rem" }}>
-              <PersonaSelector
-                selected={selectedPersona}
-                onSelect={(p) => setSelectedPersona(p)}
-              />
+              <PersonaSelector selected={selectedPersona} onSelect={setSelectedPersona} />
             </div>
 
-            {/* Voice Panel */}
             <div
               className="glass-card"
               style={{
                 padding: "1.5rem",
-                borderColor: `${selectedPersona.color}30`,
-                boxShadow: `0 4px 24px ${selectedPersona.glow.replace("0.4", "0.1")}`,
+                borderColor: `${selectedPersona.color}35`,
+                boxShadow: `0 4px 28px ${selectedPersona.glow.replace("0.25", "0.12")}`,
                 transition: "border-color 0.3s, box-shadow 0.3s",
               }}
             >
-              <div style={{ marginBottom: "1rem" }}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "4px 12px",
-                    borderRadius: "100px",
-                    background: `${selectedPersona.color}15`,
-                    border: `1px solid ${selectedPersona.color}30`,
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    color: selectedPersona.color,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  {selectedPersona.emoji} Talking to {selectedPersona.name}
+              <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="badge" style={{
+                  background: `${selectedPersona.color}18`,
+                  border: `1px solid ${selectedPersona.color}35`,
+                  color: selectedPersona.color,
+                }}>
+                  {selectedPersona.emoji} {selectedPersona.name} · {selectedLanguage.flag} {selectedLanguage.label}
                 </div>
               </div>
               <VoiceAgent
                 userName={firstName}
                 persona={selectedPersona}
+                language={selectedLanguage}
+                onSessionStart={handleSessionStart}
                 onSessionEnd={handleSessionEnd}
               />
             </div>
 
-            {/* Tip */}
-            <div
-              style={{
-                padding: "0.875rem 1.125rem",
-                background: `${selectedPersona.color}0a`,
-                border: `1px solid ${selectedPersona.color}20`,
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                color: "var(--text-secondary)",
-                display: "flex",
-                gap: "8px",
-                transition: "all 0.3s ease",
-              }}
-            >
+            <div style={{
+              padding: "0.875rem 1.125rem",
+              background: `${selectedPersona.color}0c`,
+              border: `1px solid ${selectedPersona.color}20`,
+              borderRadius: "12px",
+              fontSize: "0.82rem",
+              color: "var(--text-secondary)",
+              display: "flex", gap: "8px",
+            }}>
               <span>💡</span>
               <span>
-                <strong style={{ color: selectedPersona.color }}>{selectedPersona.name} tip:</strong>{" "}
+                <strong style={{ color: selectedPersona.color }}>{selectedPersona.name}:</strong>{" "}
                 {selectedPersona.id === "aria"
                   ? "Ask me anything — from daily questions to creative brainstorms."
                   : selectedPersona.id === "alex"
-                  ? "Share your code, describe a bug, or ask me to design a system architecture."
-                  : "Tell me a theme and I'll weave it into a story, poem, or creative brief."}
+                  ? "Share your code, describe a bug, or ask me to design a system."
+                  : "Tell me a theme and I'll turn it into a story, poem, or idea."}
               </span>
             </div>
           </div>
         )}
 
-        {/* STATS TAB */}
-        {activeTab === "stats" && (
-          <div>
-            <h2
+        {/* ── CHAT TAB ─────────────────────────────────────── */}
+        {activeTab === "chat" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div className="glass-card" style={{ padding: "1.25rem 1.5rem" }}>
+              <PersonaSelector selected={selectedPersona} onSelect={setSelectedPersona} />
+            </div>
+            <div
+              className="glass-card"
               style={{
-                fontSize: "1.2rem",
-                fontWeight: 700,
-                marginBottom: "1.5rem",
-                color: "var(--text-primary)",
+                overflow: "hidden",
+                borderColor: `${selectedPersona.color}35`,
+                boxShadow: `0 4px 28px ${selectedPersona.glow.replace("0.25", "0.1")}`,
               }}
             >
-              Your Usage Analytics
-            </h2>
+              <ChatPanel
+                persona={selectedPersona}
+                language={selectedLanguage}
+                userName={firstName}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── ANALYTICS TAB ────────────────────────────────── */}
+        {activeTab === "stats" && (
+          <div>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h2 className="section-title">Usage Analytics</h2>
+              <p className="section-sub">Your session history and AI usage breakdown.</p>
+            </div>
             <UsageDashboard sessions={localSessions} />
           </div>
         )}
 
-        {/* MEMORY TAB */}
+        {/* ── MEMORY TAB ───────────────────────────────────── */}
         {activeTab === "memory" && (
           <div>
             <div style={{ marginBottom: "1.25rem" }}>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-                Aria&apos;s Memory
-              </h2>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                Store facts about yourself so your AI remembers across sessions.
+              <h2 className="section-title">AI Memory</h2>
+              <p className="section-sub">
+                Store facts about yourself so VoxMind always knows your context.
               </p>
             </div>
             <MemoryPanel
@@ -279,12 +231,7 @@ export default function DashboardClient({ firstName, userId }: DashboardClientPr
               memories={localMemories as any}
               onAdd={(fact, category) => {
                 setLocalMemories((prev) => [
-                  {
-                    _id: `local-${Date.now()}`,
-                    fact,
-                    category,
-                    createdAt: Date.now(),
-                  },
+                  { _id: `local-${Date.now()}`, fact, category, createdAt: Date.now() },
                   ...prev,
                 ]);
               }}
@@ -294,13 +241,6 @@ export default function DashboardClient({ firstName, userId }: DashboardClientPr
             />
           </div>
         )}
-
-        {/* Hidden session tracker */}
-        <div
-          style={{ display: "none" }}
-          data-session-persona={selectedPersona.id}
-          onClick={handleVoiceStart}
-        />
       </div>
     </div>
   );

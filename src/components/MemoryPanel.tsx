@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Brain, Plus, Trash2, Tag, ChevronDown } from "lucide-react";
-import type { Id } from "../../convex/_generated/dataModel";
+
+// Using a local type so the component works without Convex being initialized
+type MemoryId = string;
 
 interface Memory {
-  _id: Id<"memories">;
+  _id: MemoryId;
   fact: string;
   category: string;
   createdAt: number;
@@ -14,7 +16,7 @@ interface Memory {
 interface MemoryPanelProps {
   memories: Memory[];
   onAdd: (fact: string, category: string) => void;
-  onDelete: (id: Id<"memories">) => void;
+  onDelete: (id: MemoryId) => void;
 }
 
 const CATEGORIES = [
