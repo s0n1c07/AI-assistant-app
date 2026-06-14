@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
 
     await resend.emails.send({
       from: "VoxMind AI <onboarding@resend.dev>",
-      to: [email || "feedback@voxmind.ai"],
+      to: ["habubolahello123@gmail.com"],
+      replyTo: email || undefined,
       subject: `[VoxMind Feedback] ${subject || "General"} — ${stars}`,
       html,
     });
