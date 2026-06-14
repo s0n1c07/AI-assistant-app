@@ -30,6 +30,7 @@ export default function VoiceAgent({ userName, persona, language, onSessionStart
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
+  const [partialText, setPartialText] = useState<{ role: "user" | "assistant"; text: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCountRef = useRef(0);
 
@@ -65,6 +66,7 @@ export default function VoiceAgent({ userName, persona, language, onSessionStart
       setCallStatus("idle");
       setIsSpeaking(false);
       setVolumeLevel(0);
+      setPartialText(null);
       onSessionEnd?.(messageCountRef.current);
     };
 
@@ -72,17 +74,30 @@ export default function VoiceAgent({ userName, persona, language, onSessionStart
     const onSpeechEnd = () => setIsSpeaking(false);
     const onVolumeLevel = (level: number) => setVolumeLevel(level);
 
-    const onMessage = (msg: { type: string; role?: string; transcript?: string }) => {
+    const onMessage = (msg: {
+      type: string;
+      role?: string;
+      transcript?: string;
+      transcriptType?: "partial" | "final";
+    }) => {
       if (msg.type === "transcript" && msg.role && msg.transcript) {
-        messageCountRef.current++;
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: msg.role as "user" | "assistant",
-            content: msg.transcript!,
-            timestamp: new Date(),
-          },
-        ]);
+        const role = msg.role as "user" | "assistant";
+        if (msg.transcriptType === "final") {
+          // Commit the complete turn as a single bubble
+          messageCountRef.current++;
+          setPartialText(null);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role,
+              content: msg.transcript!,
+              timestamp: new Date(),
+            },
+          ]);
+        } else {
+          // Show a live preview of what's being said (partial)
+          setPartialText({ role, text: msg.transcript! });
+        }
       }
     };
 
@@ -345,7 +360,39 @@ export default function VoiceAgent({ userName, persona, language, onSessionStart
               </div>
             </div>
           ))}
-          {isSpeaking && (
+          {/* Partial transcript live preview */}
+          {partialText && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: partialText.role === "user" ? "flex-end" : "flex-start",
+                opacity: 0.6,
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: "80%",
+                  padding: "0.6rem 1rem",
+                  borderRadius: partialText.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                  background:
+                    partialText.role === "user"
+                      ? `linear-gradient(135deg, ${persona.color}40, ${persona.color}20)`
+                      : "rgba(255,255,255,0.04)",
+                  border: "1px dashed",
+                  borderColor:
+                    partialText.role === "user" ? `${persona.color}30` : "rgba(255,255,255,0.1)",
+                  fontSize: "0.875rem",
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.5,
+                  fontStyle: "italic",
+                }}
+              >
+                {partialText.text}
+              </div>
+            </div>
+          )}
+          {/* Typing indicator when speaking but no partial yet */}
+          {isSpeaking && !partialText && (
             <div style={{ display: "flex" }}>
               <div
                 style={{
